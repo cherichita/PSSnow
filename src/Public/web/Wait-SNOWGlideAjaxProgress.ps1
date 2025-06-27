@@ -34,7 +34,10 @@
 function Wait-SNOWGlideAjaxProgress {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByInputObject', ValueFromPipeline = $true)]
+        [PSObject]$InputObject,
+
+        [Parameter(Mandatory = $true, ParameterSetName = 'ByInputObject', ValueFromPipeline = $true)]
         [string]$sysparm_execution_id,
         
         [Parameter(Mandatory = $false)]
@@ -48,14 +51,32 @@ function Wait-SNOWGlideAjaxProgress {
     )
 
     # Ensure authentication is valid
-    Assert-SNOWAuth
-    if (-not $Script:SNOWAuth.session) {
-        Write-Error 'GlideAjax requests require a valid WebSession. Use Set-SNOWAuth with the -UseWebSession switch.' -ErrorAction Stop
+    Assert-SNOWAuthWebSession
+    if ($PSCmdlet.ParameterSetName -eq 'ByInputObject') {
+        # Handle different possible structures of the input object
+        if ($InputObject.links.progress.id) {
+            $ProgressID = $InputObject.links.progress.id
+        }
+        elseif ($InputObject.result.links.progress.id) {
+            $ProgressID = $InputObject.result.links.progress.id
+        }
+        elseif ($InputObject.CommitStart.links.progress.id) {
+            $ProgressID = $InputObject.CommitStart.links.progress.id
+        }
+        elseif ($InputObject.answer) {
+            $ProgressID = $InputObject.answer
+        }
+        else {
+            Write-Error "Could not find progress ID in the provided input object."
+            return $null
+        }
+    }else{
+        $ProgressID = $sysparm_execution_id
     }
 
     # Prepare progress check parameters
     $ProgressParams = @{
-        sysparm_execution_id          = $sysparm_execution_id
+        sysparm_execution_id          = $ProgressID
         sysparm_name                  = 'getStatus'
         'ni.nolog.x_referer'          = 'ignore'
         x_referer                     = $x_referer
@@ -73,7 +94,7 @@ function Wait-SNOWGlideAjaxProgress {
         $ProgressResponse = Invoke-SNOWGlideAjax -Params $ProgressParams
         
         if ($ProgressResponse.Answer.answer) {
-            $CurrentProgress = $ProgressResponse.Answer.answer | ConvertFrom-JSON
+            $CurrentProgress = $ProgressResponse.Answer.answer | ConvertFrom-Json
 
             $ProgressReport = @{
                 Activity         = ('{0} - {1}' -f $CurrentProgress.state, $CurrentProgress.name)

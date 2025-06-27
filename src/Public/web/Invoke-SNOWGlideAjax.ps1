@@ -33,10 +33,7 @@ function Invoke-SNOWGlideAjax {
     )
 
     # Ensure authentication is valid
-    Assert-SnowAuth
-    if (-not $Script:SNOWAuth.session) {
-        Write-Error 'GlideAjax requests require a valid WebSession and X-UserToken. Use Set-SNOWAuth with the -UseWebSession switch.' -ErrorAction Stop
-    }
+    Assert-SNOWAuthWebSession
 
     # Validate required parameter
     if (-not $Params.ContainsKey('sysparm_processor')) {

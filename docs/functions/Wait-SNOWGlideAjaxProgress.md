@@ -13,8 +13,9 @@ Waits for a ServiceNow background process to complete.
 ## SYNTAX
 
 ```
-Wait-SNOWGlideAjaxProgress [-sysparm_execution_id] <String> [[-x_referer] <String>] [[-MaxWaitSeconds] <Int32>]
- [[-ProgressInterval] <Int32>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
+Wait-SNOWGlideAjaxProgress -InputObject <PSObject> -sysparm_execution_id <String> [-x_referer <String>]
+ [-MaxWaitSeconds <Int32>] [-ProgressInterval <Int32>] [-ProgressAction <ActionPreference>]
+ [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -33,6 +34,21 @@ Wait-SNOWGlideAjaxProgress -sysparm_execution_id 'abcd1234' -x_referer 'update_s
 
 ## PARAMETERS
 
+### -InputObject
+{{ Fill InputObject Description }}
+
+```yaml
+Type: System.Management.Automation.PSObject
+Parameter Sets: (All)
+Aliases:
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: True (ByValue)
+Accept wildcard characters: False
+```
+
 ### -sysparm_execution_id
 The execution ID of the background process to monitor.
 
@@ -42,9 +58,9 @@ Parameter Sets: (All)
 Aliases:
 
 Required: True
-Position: 1
+Position: Named
 Default value: None
-Accept pipeline input: False
+Accept pipeline input: True (ByValue)
 Accept wildcard characters: False
 ```
 
@@ -57,7 +73,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 2
+Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -73,7 +89,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 3
+Position: Named
 Default value: 1800
 Accept pipeline input: False
 Accept wildcard characters: False
@@ -89,7 +105,7 @@ Parameter Sets: (All)
 Aliases:
 
 Required: False
-Position: 4
+Position: Named
 Default value: 50
 Accept pipeline input: False
 Accept wildcard characters: False

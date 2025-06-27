@@ -9,6 +9,7 @@ Import-Module "$ModulePath\$ProjectName.psd1" -Force -ErrorAction Stop
 InModuleScope $ProjectName {
     Describe "Invoke-SNOWGlideAjax" {
         BeforeAll {
+            . "$PSScriptRoot\Helpers\WebTestHelpers.ps1"
             # Mocked responses for GlideAjax
             $ValidResponse = [xml]@"
 <xml answer="+1%20%28416%29%20867-5309,North%20America,1%2C1%2Cfalse" sysparm_max="15" sysparm_name="process" sysparm_processor="global.PhoneNumberFormatter" />
@@ -27,20 +28,9 @@ InModuleScope $ProjectName {
             $Instance = 'DummyInstance'
             $SSPassword = $Password | ConvertTo-SecureString -AsPlainText -Force
             $Script:Credential = New-Object PSCredential ($Username, $SSPassword)
-            $Script:SNOWAuth = @{
-                Instance   = $Instance
-                Credential = $Credential
-                session    = @{
-                    WebSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-                }
-            }
 
-            Mock -CommandName Assert-SnowAuth -MockWith {
-                $Script:SNOWAuth.session = @{
-                    WebSession = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-                }
-            }
-
+            MockSuccessfulLoginWebRequests
+            Set-SNOWAuth -Instance $Instance -Credential $Credential -UseWebSession
             # Mock Invoke-SNOWWebRequest
             Mock -CommandName Invoke-SNOWWebRequest -ParameterFilter { $URI -eq 'xmlhttp.do' -and $Method -eq 'GET' } -MockWith {
                 param($URI, $Method, $ContentType, $Body)

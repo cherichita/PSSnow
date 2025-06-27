@@ -95,7 +95,6 @@ InModuleScope $ProjectName {
                 $SessionDetails.HasSecurityToken | Should -BeTrue
                 $SessionDetails.Valid | Should -BeFalse
             }
-
             It 'Should return get the UI concourse without WebLogin' {
                 Set-SNOWAuth -Instance $Script:TEST_SN_INSTANCE -Credential $Script:TEST_SN_CREDENTIALS
                 $ConcourseURI = "/api/now/ui/concoursepicker/current"

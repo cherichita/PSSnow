@@ -53,7 +53,8 @@ function GetMockFilePath {
 }
 
 
-$LoginResponse1 = Import-Clixml (GetMockFilePath "Invoke-WebRequest-GET-sn_devstudio_get_publish_info-WebLogin.admin.xml")
+$LoginResponse1 = Import-Clixml (GetMockFilePath "LoginResponse1.xml")
+$LoginResponse2 = Import-Clixml (GetMockFilePath "LoginResponse2.xml")
 $ValidateSessionStateResponse = Import-Clixml (GetMockFilePath "Invoke-WebRequest-GET-ValidateSessionState-user-Valid-WebLogin.admin.xml")
 $GetSnowConcourseCurrentResponse = Import-Clixml (GetMockFilePath "Invoke-RestMethod-GET--api-now-ui-concoursepicker-current-Get-SNOWWebConcourseState.admin.xml")
 $GetSnowConcourseListResponse = Import-Clixml (GetMockFilePath "Invoke-RestMethod-GET--api-now-ui-concoursepicker-concourselist-Get-SNOWWebConcourseState.admin.xml")
@@ -101,13 +102,16 @@ function MockSuccessfulLoginWebRequests([switch]$ExpireCookies) {
     else {
         @{ CookiesToExpire = @() }
     }
-    Mock -CommandName Invoke-WebRequest -ParameterFilter { $URI -like "*get_publish_info" -and $Method -eq "GET" } -MockWith { 
+    Mock -CommandName Invoke-WebRequest -ParameterFilter { $URI -like "*/login.do" -and $Method -eq "GET" } -MockWith { 
         param($URI, $WebSession)
         MockWithCookies -ResponseObject $LoginResponse1 -WebSession $WebSession @ExtraParams
     }
+    Mock -CommandName Invoke-WebRequest -ParameterFilter { $URI -like "*/login.do*user_name=*" -and $Method -eq "GET" } -MockWith { 
+        param($URI, $WebSession)
+        MockWithCookies -ResponseObject $LoginResponse2 -WebSession $WebSession @ExtraParams
+    }
     Mock -CommandName Invoke-WebRequest -ParameterFilter { 
-        $URI -like "*sys_user?sysparm_limit=1&sysparm_fields=sys_id,name,user_name&sysparm_query=user_name=*" -and $Method -eq "GET" -and
-        $WebSession.Headers['X-UserToken'] -match "[a-z0-9]{60,}"
+        $URI -like "*sys_user*sysparm_query=user_name=*" -and $Method -eq "GET"
     } -MockWith { 
         param($URI, $WebSession)
         MockWithCookies -ResponseObject $ValidateSessionStateResponse -WebSession $WebSession @ExtraParams

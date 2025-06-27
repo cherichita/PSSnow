@@ -11,7 +11,7 @@ function Assert-SNOWAuthWebSession() {
         
     #? Validate session cookies - if they are invalid, attempt to fetch a NEW session.
     if ($SessionState.CookiesValid -eq $true -and !$SessionState.Expired -and (!$NewSession.IsPresent)) {
-        Write-Verbose "PSSnow WebSession Cookies appear valid. Instance: $($SessionState.Instance) $($SessionState.NextCookieExpiration.ToString('yyyy-MM-dd HH:mm:ss'))"
+        Write-Verbose "PSSnow WebSession Cookies appear valid. Instance: $($SessionState.Instance)"
         $script:SNOWAuth.SessionState = $SessionState
     }
     else {

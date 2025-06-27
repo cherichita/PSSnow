@@ -11,7 +11,6 @@ InModuleScope $ProjectName {
     Describe "WebSession Tests" -Tag "Unit" {
         BeforeAll {
             . "$PSScriptRoot\Helpers\WebTestHelpers.ps1"
-            $RestMethodResponse = Import-Clixml "$PSScriptRoot\MockedResponses\Set-SNOWAuth_oauth.xml"
             
             $Username = 'DummyUsername'
             $Password = 'DummyPassword'
@@ -32,7 +31,7 @@ InModuleScope $ProjectName {
                 Set-SNOWAuth -Instance $Instance -Credential $Credential -UseWebSession
                 $script:SNOWAuth | Should -BeOfType Hashtable
                 $script:SNOWAuth.session.g_ck | Should -Not -BeNullOrEmpty
-                Should -Invoke Invoke-WebRequest -Exactly 3
+                Should -Invoke Invoke-WebRequest -Exactly 4
             }
 
             It "Should be able to fetch a web session after authenticating." {
@@ -44,7 +43,7 @@ InModuleScope $ProjectName {
                 $script:SNOWAuth.session.g_ck | Should -BeNull
                 $script:SNOWAuth.session = New-SNOWAuthWebSession -Instance $Instance -Credential $Credential
                 $script:SNOWAuth.session.g_ck | Should -Not -BeNullOrEmpty
-                Should -Invoke Invoke-WebRequest -Exactly 2
+                Should -Invoke Invoke-WebRequest -Exactly 3
             }
           
             It "Should fail when there are no cookies after authentication" {
@@ -56,7 +55,7 @@ InModuleScope $ProjectName {
                 $script:SNOWAuth.session.g_ck | Should -Not -BeNullOrEmpty
                 # We fake update the cookies.
                 $Script:SNOWAuth.session.WebSession.Cookies = [System.Net.CookieContainer]::new()
-                Should -Invoke Invoke-WebRequest -Exactly 3
+                Should -Invoke Invoke-WebRequest -Exactly 4
                 Mock -CommandName Invoke-WebRequest -ParameterFilter { 
                     $URI -like "*sys_user?sysparm_limit=1&sysparm_fields=sys_id,name,user_name&sysparm_query=user_name=*" -and $Method -eq "GET" `
                         -and $WebSession.Cookies.GetCookies($URI).Count -eq 0 -and $WebSession.Headers['X-UserToken'] -match "[a-z0-9]{60,}"

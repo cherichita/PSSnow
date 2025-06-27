@@ -12,6 +12,7 @@ InModuleScope $ProjectName {
             . "$PSScriptRoot\Helpers\WebTestHelpers.ps1"
             Write-Host "Running BackgroundScript Integration tests against instance: $env:SN_TEST_INSTANCE"
             AssertTestSnowAuth -SetAuth
+            
         }
         BeforeEach {
             $env:SNOW_MOCK_TAG = $null
@@ -29,7 +30,7 @@ InModuleScope $ProjectName {
             It 'should execute a background script with a timeout' {
                 $TestGuid = [guid]::NewGuid().ToString()
                 $ScriptContents = "gs.info('Executing PSSnow Test {0}')" -f $TestGuid
-                $Response = Invoke-SNOWBackgroundScript -ScriptContents $ScriptContents
+                $Response = Invoke-SNOWBackgroundScript -ScriptContents $ScriptContents -Scope 'global'
                 $Response | Should -BeOfType 'PSCustomObject'
                 $Response.ScriptResponse | Should -BeLike "*$TestGuid*"
             }
@@ -42,6 +43,21 @@ InModuleScope $ProjectName {
                 $Response = Invoke-SNOWBackgroundScript -ScriptContents $ScriptContents
                 $Response | Should -BeOfType 'PSCustomObject'
                 $Response.ScriptResponse | Should -BeLike "*$TestGuid*"
+            }
+
+            It 'should execute a background script in a specific scope' {
+                $TestGuid = [guid]::NewGuid().ToString()
+                $ScriptContents = "gs.info('Executing PSSnow Test {0}')" -f $TestGuid
+                $Ctx = Get-SNOWBackgroundScriptContext
+                $Scope = $Ctx.Scopes | Where-Object { -not $_.IsSelected } | Select-Object -Last 1
+                if ($Scope) {
+                    $Response = Invoke-SNOWBackgroundScript -ScriptContents $ScriptContents -Scope $Scope.Value
+                    $Response | Should -BeOfType 'PSCustomObject'
+                    $Response.ScriptResponse | Should -BeLike "*$TestGuid*"
+                    $Response.ScriptResponse
+                } else {
+                    Write-Warning "No valid scope found for background script execution."
+                }
             }
         }
     }

@@ -29,36 +29,27 @@ function Invoke-SNOWBackgroundScript {
         [Parameter(Mandatory = $false)]
         [string]$Scope = 'global'
     )
-    
     Assert-SNOWAuthWebSession
-    $Session = Get-SNOWWebSessionState -ValidateSession -ErrorAction Stop
-    $ConcourseState = Get-SNOWWebConcourseState
-    $ScopeSysId = $ConcourseState.ConcourseList.availableApplications | 
-    Where-Object { ($_.scopeName -eq $Scope) -or ($_.sysId -eq $Scope) } | 
-    Select-Object -ExpandProperty sysId
-    
-    if($Scope -eq 'global'){
-        $ScopeSysId = 'global'
-    }
-    
     
     $RequestParams = @{
-        URI           = '/sys.scripts.do'
+        URI           = 'sys.scripts.do'
         Method        = 'POST'
-        # ContentType = 'application/x-www-form-urlencoded'
+        ContentType   = 'application/x-www-form-urlencoded'
         Body          = @{
             script                    = "$ScriptContents"
             sysparm_ck                = $Session.SecurityToken
             runscript                 = 'Run script'
-            sys_scope                 = $ScopeSysId
+            sys_scope                 = $Scope
             record_for_rollback       = 'true'
             quota_managed_transaction = 'on'
+            noredirect                = 'true'
         }
         UseRestMethod = $false
     }
     $Response = Invoke-SNOWWebRequest @RequestParams
+    
     return @{
-        Format         = 'json'
         ScriptResponse = [System.Web.HttpUtility]::HtmlDecode($Response.Content) -replace '<BR/>', "`n"
+        RawResponse    = $Response
     }
 }

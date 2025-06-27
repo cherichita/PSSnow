@@ -99,7 +99,8 @@ FunctionsToExport = 'Set-SNOWAuth', 'Get-SNOWObject', 'Get-SNOWUser', 'Remove-SN
                'Start-SNOWUpdateSetBackOut', 'Start-SNOWUpdateSetCommit', 'Start-SNOWUpdateSetPreview', 
                'Start-SNOWVCSApplyChanges', 'Start-SNOWVCSApplyStash', 'Start-SNOWVCSImport',  
                'Sync-SNOWVCSApplication', 'Wait-SNOWCICDProgress',
-               'Get-SNOWDevStudioPublishInfo', 'Start-SNOWGlideAjaxUpdateSetCommit', 'Start-SNOWGlideAjaxUpdateSetPreview'
+               'Get-SNOWDevStudioPublishInfo', 'Start-SNOWGlideAjaxUpdateSetCommit', 'Start-SNOWGlideAjaxUpdateSetPreview',
+               'Get-SNOWBackgroundScriptScopes'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()

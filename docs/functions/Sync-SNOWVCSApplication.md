@@ -14,14 +14,14 @@ Synchronizes a ServiceNow application with a Git repository using the CICD Sourc
 
 ### BySysID (Default)
 ```
-Sync-SNOWVCSApplication -SysID <String> -RepoURL <String> [-BranchName <String>] -Credential <PSCredential>
+Sync-SNOWVCSApplication -SysID <String> -RepoURL <String> -BranchName <String> -Credential <PSCredential>
  [-DefaultUser <String>] [-MIDServerSysID <String>] [-AutoUpgradeBaseApp <Boolean>] [-ImportIfMissing]
  [-ApplyChanges] [-Force] [-TimeoutSec <Int32>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ### ByScope
 ```
-Sync-SNOWVCSApplication -Scope <String> -RepoURL <String> [-BranchName <String>] -Credential <PSCredential>
+Sync-SNOWVCSApplication -Scope <String> -RepoURL <String> -BranchName <String> -Credential <PSCredential>
  [-DefaultUser <String>] [-MIDServerSysID <String>] [-AutoUpgradeBaseApp <Boolean>] [-ImportIfMissing]
  [-ApplyChanges] [-Force] [-TimeoutSec <Int32>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
@@ -109,7 +109,7 @@ Type: System.String
 Parameter Sets: (All)
 Aliases:
 
-Required: False
+Required: True
 Position: Named
 Default value: None
 Accept pipeline input: False

@@ -22,6 +22,57 @@ Import-Module "$ModulePath\$ProjectName.psm1" -Force
 
 InModuleScope $ProjectName {
     Describe 'Source Control Integration Tests' {
+        BeforeAll {
+            . "$PSScriptRoot\Helpers\WebTestHelpers.ps1"
+            Write-Host "Running Integration tests against instance: $env:SN_TEST_INSTANCE"
+            AssertTestSnowAuth -SetAuth
+            function GetTestApp {
+                Get-SNOWObject -Table 'sys_app' -Query "name=TestApp^scope=$($TestRequest.Scope)"
+            }
+
+            function GetTestAppRecord {
+                Get-SNOWObject -Table 'sys_app' -Query "name=TestApp^scope=$($TestRequest.Scope)"
+            }
+        }
+        Context 'Sync-SNOWDevStudioApp' -Skip:(
+            ([string]::IsNullOrEmpty($env:SN_TEST_INSTANCE)) -or
+            ([string]::IsNullOrEmpty($env:SN_TEST_USERNAME)) -or
+            ([string]::IsNullOrEmpty($env:SN_TEST_PASSWORD)) -or 
+            ([string]::IsNullOrEmpty($env:GITHUB_PAT))
+        ) -Tag 'Integration' {
+            BeforeAll {
+                AssertTestSnowAuth -SetAuth
+                Assert-SNOWAuth
+                Set-SNOWWebConcourseState -ScopeName 'global'
+                $TestRequest = @{
+                    Scope       = 'hax_1337_testapp'
+                    AppName     = 'TestApp'
+                    RepoURL     = 'https://github.com/cherichita/servicenow-testapp.git'
+                    Credential  = [pscredential]::new('git', (ConvertTo-SecureString -String $env:GITHUB_PAT -AsPlainText -Force))
+                    BranchName  = 'blankslate'
+                    DefaultUser = 'dimiter@todorov.ca'
+                }
+                
+            }
+            It 'Should Sync the TEST App using the DevStudio API' {
+                $Result = Sync-SNOWDevStudioApp @TestRequest -ApplyChanges
+                $AppRecord = GetTestAppRecord
+                $AppRecord | Should -Not -BeNullOrEmpty
+                $AppRecord.sys_id | Should -Not -BeNullOrEmpty
+            }
+
+            It 'Should Sync the TEST App - when the REPO config is removed.' {
+                $RepoConfig = Get-SNOWObject -Table 'sys_repo_config' -Query "url=$($TestRequest.RepoURL)^"
+                if ($RepoConfig) {
+                    Write-Warning "Deleting RepoConfig: $($RepoConfig.sys_id)"
+                    Remove-SNOWObject -Table 'sys_repo_config' -Sys_ID $RepoConfig.sys_id -Confirm:$false
+                }
+                $Result = Sync-SNOWDevStudioApp @TestRequest -ApplyChanges
+                $AppRecord = GetTestAppRecord
+                $AppRecord | Should -Not -BeNullOrEmpty
+                $AppRecord.sys_id | Should -Not -BeNullOrEmpty
+            }
+        }
         Context 'Sync-SNOWVCSApplication' -Skip:(
             ([string]::IsNullOrEmpty($env:SN_TEST_INSTANCE)) -or
             ([string]::IsNullOrEmpty($env:SN_TEST_USERNAME)) -or
@@ -31,8 +82,6 @@ InModuleScope $ProjectName {
             BeforeAll {
                 . "$PSScriptRoot\Helpers\WebTestHelpers.ps1"
                 # Setup authentication if not already done
-                AssertTestSnowAuth -SetAuth
-                Assert-SNOWAuth
                 Set-SNOWWebConcourseState -ScopeName 'global'
                 $TestRequest = @{
                     Scope       = 'hax_1337_testapp'
@@ -41,18 +90,6 @@ InModuleScope $ProjectName {
                     BranchName  = 'blankslate'
                     DefaultUser = 'dimiter@todorov.ca'
                 }
-                
-                function GetTestApp {
-                    Get-SNOWObject -Table 'sys_app' -Query "name=TestApp^scope=$($TestRequest.Scope)"
-                }
-
-                function GetTestAppRecord {
-                    Get-SNOWObject -Table 'sys_app' -Query "name=TestApp^scope=$($TestRequest.Scope)"
-                }
-            }
-            BeforeEach {
-                $env:SKIP_MOCKS = 'true'
-                $env:SNOW_MOCK_TAG = $null
             }
 
             
@@ -83,7 +120,7 @@ InModuleScope $ProjectName {
                     $UpdateSetName = "Test Update Set Scoped"
                     $ExistingUpdateSet = Get-SNOWObject -Table 'sys_update_set' -Query "name=$($UpdateSetName)"
                     if ($ExistingUpdateSet) {
-                        Start-SNOWUpdateSetBackOut -Sys_Id $ExistingUpdateSet.sys_id -Confirm:$false
+                        Start-SNOWUpdateSetBackOut -Sys_ID $ExistingUpdateSet.sys_id -Confirm:$false
                     }
                 }
                 It 'Should create a new update set' {
@@ -129,7 +166,7 @@ InModuleScope $ProjectName {
                 $RepoConfig = Get-SNOWObject -Table 'sys_repo_config' -Query "url=$($TestRequest.RepoURL)^"
                 if ($RepoConfig) {
                     Write-Warning "Deleting RepoConfig: $($RepoConfig.sys_id)"
-                    Remove-SNOWObject -Table 'sys_repo_config' -sys_id $RepoConfig.sys_id -Confirm:$false
+                    Remove-SNOWObject -Table 'sys_repo_config' -Sys_ID $RepoConfig.sys_id -Confirm:$false
                 }
                 # $CurrentApp = GetTestApp
                 # $CurrentApp | Should -BeNullOrEmpty

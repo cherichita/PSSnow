@@ -73,7 +73,7 @@ function Sync-SNOWVCSApplication {
         [Parameter(Mandatory = $true)]
         [string]$RepoURL,
         
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [string]$BranchName,
         
         [Parameter(Mandatory = $true)]
@@ -144,24 +144,19 @@ function Sync-SNOWVCSApplication {
         if ($PSCmdlet.ParameterSetName -eq 'ByScope') {
             $appQuery = "scope=${Scope}^"
             $appObj = Get-SNOWObject -Table 'sys_app' -Query $appQuery -ErrorAction SilentlyContinue
-            if ($appObj) {
-                $appExists = $true
-                $SysID = $appObj.sys_id
-                $Scope = $appObj.scope
-                Write-Host "Found application with scope ${Scope} - sys_id: ${SysID}"
-            }
+            
         }
         else {
             $appObj = Get-SNOWObject -Table 'sys_app' -Sys_Id $SysID -ErrorAction SilentlyContinue
-            if ($appObj) {
-                $appExists = $true
-                $Scope = $appObj.scope
-                $SysID = $appObj.sys_id
-                Write-Host "Found application with sys_id ${SysID} - scope: ${Scope}"
-            }
+        }
+        if ($appObj) {
+            $appExists = $true
+            $SysID = $appObj.sys_id
+            $Scope = $appObj.scope
+            Write-Host "Found application $($appObj.Name) $($PSCmdlet.ParameterSetName) - ${Scope} - sys_id: ${SysID}"
         }
         $AppRepo = Get-SNOWObject -Table 'sys_repo_config' -Query "url=${RepoURL}^"
-        # The sn_cicd/sc/import endpoint does
+        
         if ($appObj.sys_id) {
             if (-not $AppRepo) {
                 Write-Warning "Application $($appObj.sys_id) exists - but no sys_repo_config found. Creating sys_repo_config record for the application."
@@ -175,9 +170,9 @@ function Sync-SNOWVCSApplication {
                     use_default_commit_email = "false"
                     authentication           = "basic_authentication"
                 }
-                $SysRepoConfig = New-SNOWObject -Table 'sys_repo_config' -Properties $RepoProps -PassThru
-                if ($SysRepoConfig) {
-                    Write-Verbose "Created sys_repo_config record with sys_id: $($SysRepoConfig.sys_id)"
+                $AppRepo = New-SNOWObject -Table 'sys_repo_config' -Properties $RepoProps -PassThru
+                if ($AppRepo) {
+                    Write-Verbose "Created sys_repo_config record with sys_id: $($AppRepo.sys_id)"
                 }
                 else {
                     Write-Error "Failed to create sys_repo_config record for the application"

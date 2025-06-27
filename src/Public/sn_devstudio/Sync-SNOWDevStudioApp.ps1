@@ -9,13 +9,13 @@ function Sync-SNOWDevStudioApp {
         This function uses the ServiceNow Dev Studio API - which is the same API that SN Studio uses when managing a repository.
         This function still works in some fringe cases where an application exists but the repo does not. 
 
-    .PARAMETER ScopeName
+    .PARAMETER Scope
         The scope name of the ServiceNow application.
 
     .PARAMETER AppName
         The name of the ServiceNow application.
 
-    .PARAMETER RepoUri
+    .PARAMETER RepoURL
         The URI of the Git repository.
 
     .PARAMETER Credential
@@ -27,14 +27,14 @@ function Sync-SNOWDevStudioApp {
     .PARAMETER DefaultUser
         The default user email to use for Git operations.
 
-    .PARAMETER ApplyRemoteChanges
+    .PARAMETER ApplyChanges
         If specified, applies remote changes to the local instance.
 
     .PARAMETER Force
         If specified, forces operations even if local changes exist.
 
     .EXAMPLE
-        Sync-SNOWDevStudioApp -ScopeName "x_acme_app" -AppName "ACME App" -RepoUri "https://github.com/org/repo.git" -Credential $cred -Branch "main" -DefaultUser "user@example.com"
+        Sync-SNOWDevStudioApp -Scope "x_acme_app" -AppName "ACME App" -RepoURL "https://github.com/org/repo.git" -Credential $cred -Branch "main" -DefaultUser "user@example.com"
 
     .NOTES
         This function requires an authenticated session to ServiceNow.
@@ -42,25 +42,28 @@ function Sync-SNOWDevStudioApp {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]$ScopeName,
+        [string]$Scope,
         
         [Parameter(Mandatory = $true)]
         [string]$AppName,
         
         [Parameter(Mandatory = $true)]
-        [string]$RepoUri,
+        [string]$RepoURL,
         
         [Parameter(Mandatory = $true)]
         [pscredential]$Credential,
         
         [Parameter(Mandatory = $true)]
-        [string]$Branch,
+        [string]$BranchName,
         
         [Parameter(Mandatory = $true)]
         [string]$DefaultUser,
+
+        [Parameter()]
+        [string]$MIDServerSysID,
         
         [Parameter(Mandatory = $false)]
-        [switch]$ApplyRemoteChanges,
+        [switch]$ApplyChanges,
         
         [Parameter(Mandatory = $false)]
         [switch]$Force
@@ -69,14 +72,14 @@ function Sync-SNOWDevStudioApp {
     process {
         # Create or update the credential record
         $CredentialValues = @{
-            name      = ("vcs $ScopeName" -replace '^(.{0,32}).*', '$1')
+            name      = ("vcs $Scope" -replace '^(.{0,32}).*', '$1')
             user_name = $Credential.UserName
             password  = $Credential.GetNetworkCredential().Password
         }
         
         $CredentialSyncRequest = @{
             Table                 = 'basic_auth_credentials'
-            Query                 = "nameEQ$($CredentialValues.name)^"
+            Query                 = "name=$($CredentialValues.name)^"
             Body                  = $CredentialValues
             Recreate              = $false
             AdditionalQueryParams = @{
@@ -93,27 +96,30 @@ function Sync-SNOWDevStudioApp {
         }
         
         if (-not $VCSCredential.sys_id) {
-            Write-Error "Failed to sync credential for $ScopeName"
+            Write-Error "Failed to sync credential for $Scope"
             return
         }
         
         # Define VCS app parameters
         $VCSAppParams = @{
-            url                       = $RepoUri
-            branch                    = $Branch
-            defaultBranchName         = $Branch
-            remoteDefaultBranchName   = $Branch
+            url                       = $RepoURL
+            branch                    = $BranchName
+            defaultBranchName         = $BranchName
+            remoteDefaultBranchName   = $BranchName
             credential                = $VCSCredential.sys_id
             email                     = $DefaultUser
             use_default_email_for_all = $true
             setTestConnection         = $true
             mid_server                = ''
         }
-        
+        function getAppObj() {
+            Get-SNOWDevStudioApp | Select-Object -ExpandProperty apps | 
+            Where-Object { $_.scope -eq $Scope -and $_.name -eq $AppName }
+        }
         # Get VCS apps and find the specific app
         $VCSApps = Get-SNOWDevStudioApp
-        $ScopeApp = $VCSApps.apps | Where-Object { $_.scope -eq $ScopeName -and $_.name -eq $AppName }
-        
+        $ScopeApp = $VCSApps.apps | Where-Object { $_.scope -eq $Scope -and $_.name -eq $AppName }
+        $AppRepo = Get-SNOWObject -Table 'sys_repo_config' -Query "url=${RepoURL}^"
         if (-not $ScopeApp) {
             # Create a new VCS app if it doesn't exist
             $CreateAppRequest = @{
@@ -126,7 +132,7 @@ function Sync-SNOWDevStudioApp {
             $CreateResponse = Invoke-SNOWWebRequest @CreateAppRequest
             
             if ($CreateResponse.StatusCode -ne 202) {
-                Write-Error "Failed to create VCS app for $ScopeName - $($CreateResponse.Content)"
+                Write-Error "Failed to create VCS app for $Scope - $($CreateResponse.Content)"
                 return
             }
             
@@ -139,25 +145,25 @@ function Sync-SNOWDevStudioApp {
                     return Sync-SNOWDevStudioApp @PSBoundParameters
                 }
                 else {
-                    Write-Error "Failed to create VCS app for $ScopeName - $($CreateProgress | ConvertTo-Json)"
+                    Write-Error "Failed to create VCS app for $Scope - $($CreateProgress | ConvertTo-Json)"
                     return
                 }
             }
             
-            Write-Warning "No VCS app found for $ScopeName"
+            Write-Warning "No VCS app found for $Scope"
         }
         else {
             # Handle existing app
             $TransactionScope = $ScopeApp.sysId
             
-            if ($ScopeName -eq 'global') {
+            if ($Scope -eq 'global') {
                 $TransactionScope = 'global'
             }
             
             if (-not $ScopeApp.vcs.repoId) {
                 # Create temporary branch if repo doesn't exist
                 $TemporaryBranchName = "sn_instances/$($Script:SNOWAuth.Instance)"
-                Write-Warning "No VCS repo found for $ScopeName - Creating temporary branch: $TemporaryBranchName"
+                Write-Warning "No VCS repo found for $Scope - Creating temporary branch: $TemporaryBranchName"
                 
                 $TempBranchParams = $VCSAppParams.Clone()
                 $TempBranchParams['branch'] = $TemporaryBranchName
@@ -183,22 +189,23 @@ function Sync-SNOWDevStudioApp {
                     }
                 }
                 else {
-                    Write-Error "Failed to create temporary branch for $ScopeName - $($TempBranchResponse | ConvertTo-Json)"
+                    Write-Error "Failed to create repository for $Scope - $($UpdateResponse.result)"
+                    return
                 }
             }
             else {
                 # Update existing repo configuration
                 $VcsUri = "api/sn_devstudio/v1/vcs/apps/$($ScopeApp.sysId)"
-                $RepoUri = "$VcsUri/repos/$($ScopeApp.vcs.repoId)"
+                $RepoURL = "$VcsUri/repos/$($ScopeApp.vcs.repoId)"
                 $ScopeVcs = Invoke-SNOWWebRequest -URI $VcsUri -Method GET -UseRestMethod
                 $ScopeVcs = $ScopeVcs.result
                 
                 # Update credential if needed
                 if (-not $ScopeVcs.credentialId -or ($ScopeVcs.credentialId -ne $VCSAppParams.credential) -or $Force) {
-                    Write-Warning "Credential mismatch for $ScopeName - Updating credential"
+                    Write-Warning "Credential mismatch for $Scope - Updating credential"
                     
                     $UpdateCredentialRequest = @{
-                        Uri           = "$($RepoUri)?sysparm_transaction_scope=$($TransactionScope)"
+                        Uri           = "$($RepoURL)?sysparm_transaction_scope=$($TransactionScope)"
                         Method        = 'PUT'
                         Body          = $VCSAppParams
                         ContentType   = 'application/json'
@@ -212,29 +219,29 @@ function Sync-SNOWDevStudioApp {
                         $ProgressResult = Wait-SNOWDevStudioTransaction -ProgressId $UpdateCredentialResponse.result.progressId 
                         
                         if ($ProgressResult.state -eq 2) {
-                            Write-Information "Credential updated successfully for $ScopeName"
+                            Write-Information "Credential updated successfully for $Scope"
                         }
                         else {
-                            Write-Error "Failed to update credential for $ScopeName - $($ProgressResult | ConvertTo-Json)"
+                            Write-Error "Failed to update credential for $Scope - $($ProgressResult | ConvertTo-Json)"
                             return
                         }
                     }
                     else {
-                        Write-Error "Failed to update credential for $ScopeName - $($UpdateCredentialResponse.result)"
+                        Write-Error "Failed to update credential for $Scope - $($UpdateCredentialResponse.result)"
                     }
                 }
                 
                 # Switch branch if needed
-                if ($ScopeApp.vcs.currentBranch -ne $Branch) {
-                    Write-Warning "Branch mismatch for $ScopeName - Switching to branch: $Branch"
+                if ($ScopeApp.vcs.currentBranch -ne $BranchName) {
+                    Write-Warning "Branch mismatch for $Scope - Switching to branch: $BranchName"
                     
                     $UpdateBranchRequest = @{
                         Uri           = "api/sn_devstudio/v1/vcs/apps/$($ScopeApp.sysId)/repos/$($ScopeApp.vcs.repoId)/branches/switch?sysparm_transaction_scope=$($TransactionScope)"
                         Method        = 'PUT'
                         Body          = (@{
-                                branchName           = $Branch
+                                branchName           = $BranchName
                                 preserveLocalChanges = $false
-                                stashMessage         = "Stashing local changes before switching to branch $Branch"
+                                stashMessage         = "Stashing local changes before switching to branch $BranchName"
                                 appId                = $ScopeApp.sysId
                             } | ConvertTo-Json -Depth 5)
                         ContentType   = 'application/json'
@@ -252,7 +259,7 @@ function Sync-SNOWDevStudioApp {
                         }
                     }
                     else {
-                        Write-Error "Failed to switch branch for $ScopeName - $($UpdateBranchResponse.result)"
+                        Write-Error "Failed to switch branch for $Scope - $($UpdateBranchResponse.result)"
                     }
                 }
                 else {
@@ -270,12 +277,12 @@ function Sync-SNOWDevStudioApp {
                         $RefreshResult = Wait-SNOWDevStudioTransaction -ProgressId $RefreshBranchResponse.result.progressId
                         Write-Information "Branch refresh completed. Details: $($RefreshResult.detailMessage)"
                         if ($RefreshResult.state -ne '2') {
-                            Write-Warning "Branch refresh failed for $ScopeName. Details: $($RefreshResult | ConvertTo-Json)"
+                            Write-Warning "Branch refresh failed for $Scope. Details: $($RefreshResult | ConvertTo-Json)"
                             return $RefreshResult
                         }
                         
                         # Apply remote changes if requested
-                        if ($ApplyRemoteChanges) {
+                        if ($ApplyChanges.IsPresent) {
                             $ApplyUri = "api/sn_devstudio/v1/vcs/apps/$($ScopeApp.sysId)/repos/$($ScopeApp.vcs.repoId)/apply?sysparm_transaction_scope=$TransactionScope"
                             $RepoState = Invoke-SNOWWebRequest -URI "api/sn_devstudio/v1/vcs/apps/$($ScopeApp.sysId)" -Method GET
                             
@@ -295,11 +302,11 @@ function Sync-SNOWDevStudioApp {
                                 
                                 if ($RepoState.result.hasLocalChanges) {
                                     if ($Force) {
-                                        Write-Warning "Repo has local changes for $ScopeName - Stashing changes"
+                                        Write-Warning "Repo has local changes for $Scope - Stashing changes"
                                         $ApplyResult = Invoke-SNOWWebRequest @ApplyRequest
                                     }
                                     else {
-                                        Write-Error "Repo has local changes for $ScopeName - Cannot apply remote changes without -Force" -ErrorAction Stop
+                                        Write-Error "Repo has local changes for $Scope - Cannot apply remote changes without -Force" -ErrorAction Stop
                                     }
                                 }
                                 else {
@@ -312,7 +319,7 @@ function Sync-SNOWDevStudioApp {
                                 }
                             }
                             else {
-                                Write-Information "No remote changes to apply for $ScopeName"
+                                Write-Information "No remote changes to apply for $Scope"
                                 return $RefreshResult
                             }
                         }
@@ -321,7 +328,7 @@ function Sync-SNOWDevStudioApp {
                         }
                     }
                     else {
-                        Write-Error "Failed to refresh branch for $ScopeName - $($RefreshBranchResponse.result)"
+                        Write-Error "Failed to refresh branch for $Scope - $($RefreshBranchResponse.result)"
                     }
                 }
             }

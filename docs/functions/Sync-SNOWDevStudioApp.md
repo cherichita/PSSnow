@@ -14,8 +14,8 @@ Use sn_devstudio API endpoints to manage the repository.
 ## SYNTAX
 
 ```
-Sync-SNOWDevStudioApp [-ScopeName] <String> [-AppName] <String> [-RepoUri] <String>
- [-Credential] <PSCredential> [-Branch] <String> [-DefaultUser] <String> [-ApplyRemoteChanges] [-Force]
+Sync-SNOWDevStudioApp [-Scope] <String> [-AppName] <String> [-RepoURL] <String> [-Credential] <PSCredential>
+ [-BranchName] <String> [-DefaultUser] <String> [[-MIDServerSysID] <String>] [-ApplyChanges] [-Force]
  [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
@@ -29,12 +29,12 @@ This function still works in some fringe cases where an application exists but t
 
 ### EXAMPLE 1
 ```powershell
-Sync-SNOWDevStudioApp -ScopeName "x_acme_app" -AppName "ACME App" -RepoUri "https://github.com/org/repo.git" -Credential $cred -Branch "main" -DefaultUser "user@example.com"
+Sync-SNOWDevStudioApp -Scope "x_acme_app" -AppName "ACME App" -RepoURL "https://github.com/org/repo.git" -Credential $cred -Branch "main" -DefaultUser "user@example.com"
 ```
 
 ## PARAMETERS
 
-### -ScopeName
+### -Scope
 The scope name of the ServiceNow application.
 
 ```yaml
@@ -64,7 +64,7 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -RepoUri
+### -RepoURL
 The URI of the Git repository.
 
 ```yaml
@@ -94,8 +94,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -Branch
-The Git branch to synchronize with.
+### -BranchName
+{{ Fill BranchName Description }}
 
 ```yaml
 Type: System.String
@@ -124,7 +124,22 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ApplyRemoteChanges
+### -MIDServerSysID
+{{ Fill MIDServerSysID Description }}
+
+```yaml
+Type: System.String
+Parameter Sets: (All)
+Aliases:
+
+Required: False
+Position: 7
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ApplyChanges
 If specified, applies remote changes to the local instance.
 
 ```yaml

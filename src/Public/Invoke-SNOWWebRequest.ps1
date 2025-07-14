@@ -133,17 +133,24 @@ function Invoke-SNOWWebRequest {
                         break
                     }
                 }elseif($_.Exception.Response.StatusCode -eq 401){
-                    if($script:SNOWAuth.SessionState -and $script:SNOWAuth.session){
-                        Write-Warning "Caught 401 during Invoke-SNOWWebRequest with WebSession. Attempting to re-authenticate..."
-                        Assert-SNOWAuth
-                        Assert-SNOWAuthWebSession -NewSession
+                    if($script:SNOWAuth.session -and $Script:SNOWAuth.SessionState){
+                        Write-Warning "Caught 401 during Invoke-SNOWWebRequest with WebSession. Attempting to re-authenticate... URI: $($PSBoundParameters.URI)"
+                        try{
+                            Assert-SNOWAuth
+                            Assert-SNOWAuthWebSession -NewSession
+                        }catch{
+                            Write-Warning "Failed to re-authenticate. Retrying request without WebSession. $($_.Exception.Message)"
+                        }
+                        
                         if($Script:SNOWAuth.SessionState -and $script:SNOWAuth.SessionState.CookiesValid -eq $true){
                             Write-Verbose "Re-authenticated successfully. Retrying request..."
                             $PSBoundParameters.WebSession = $script:SNOWAuth.session.WebSession
                             $PSBoundParameters.Headers['X-UserToken'] = $script:SNOWAuth.SessionState.SecurityToken
                             continue
                         }else{
-                            Write-Warning "Retrying request without WebSession"
+                            Write-Warning "Clearing PSSnow WebSession and retrying request."
+                            $script:SNOWAuth.SessionState = $null
+                            $script:SNOWAuth.session = $null
                             $PSBoundParameters.WebSession = $null
                             $PSBoundParameters.Headers.Remove('X-UserToken')
                             $PSBoundParameters.Headers['Authorization'] = (Get-AuthHeader).Authorization

@@ -35,7 +35,7 @@ function Set-SNOWAuth {
         #Instance name e.g dev123456
         $Instance,
         [Parameter(Mandatory, ParameterSetName = 'Basic')]
-        [Parameter(Mandatory, ParameterSetName = 'OAuth')]
+        [Parameter(ParameterSetName = 'OAuth')]
         [PSCredential]
         #Basic Auth
         $Credential,
@@ -186,11 +186,15 @@ function Set-SNOWAuth {
             'OAuth' {
                 #? Get Token
                 $Body = @{
-                    grant_type= "password"
                     client_id = $ClientID
                     client_secret = [System.Net.NetworkCredential]::new('dummy', $ClientSecret).Password
-                    username = $Credential.UserName
-                    password = $Credential.GetNetworkCredential().Password
+                }
+                if($Credential){
+                    $Body.grant_type = 'password'
+                    $Body.username = $Credential.UserName
+                    $Body.password = $Credential.GetNetworkCredential().Password
+                }else{
+                    $Body.grant_type = 'client_credentials'
                 }
                 try{
                     $Token = Invoke-RestMethod -Method POST -uri "https://$Instance.service-now.com/oauth_token.do" -Body $Body -Verbose:$false -ErrorAction Stop @ProxyAuth

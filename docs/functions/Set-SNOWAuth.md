@@ -29,7 +29,7 @@ Set-SNOWAuth -Instance <String> -ClientID <String> [-ClientSecret <SecureString>
 
 ### OAuth
 ```
-Set-SNOWAuth -Instance <String> -Credential <PSCredential> -ClientID <String> -ClientSecret <SecureString>
+Set-SNOWAuth -Instance <String> [-Credential <PSCredential>] -ClientID <String> -ClientSecret <SecureString>
  [-ProxyURI <String>] [-ProxyCredential <PSCredential>] [-HandleRatelimiting] [-WebCallTimeoutSeconds <Int32>]
  [-BypassDefaultProxy] [-UseWebSession] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
@@ -53,16 +53,24 @@ Set-SNOWAuth -Instance "InstanceName" -Credential (get-credential) -Verbose
 ### EXAMPLE 2
 ```powershell
 Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -ClientSecret (ConvertTo-SecureString -String "ClientSecret" -AsPlainText -Force) -Credential (get-credential) -Verbose
-# Applies OAuth authentication in the current session for instance 'InstanceName.service-now.com'
+# Applies OAuth authentication in the current session for instance 'InstanceName.service-now.com' using the resource owner password credentials flow.
 ```
 
 ### EXAMPLE 3
+```powershell
+Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -ClientSecret (ConvertTo-SecureString -String "ClientSecret" -AsPlainText -Force)
+# Applies OAuth authentication in the current session for instance 'InstanceName.service-now.com' using the client credentials flow.
+# Client Credentials flow must be enabled in ServiceNow via system property glide.oauth.inbound.client.credential.grant_type.enabled
+# See: https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB2058936
+```
+
+### EXAMPLE 4
 ```powershell
 Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -AccessToken "AccessToken" -RefreshToken "RefreshToken" -ExpiresInSeconds 3600 -Verbose
 # Applies OAuth authentication with a Public Client in the current session for instance 'InstanceName.service-now.com' using provided tokens.
 ```
 
-### EXAMPLE 4
+### EXAMPLE 5
 ```powershell
 Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -AccessToken "AccessToken" -RefreshToken "RefreshToken" -ExpiresInSeconds 3600 -ClientSecret (ConvertTo-SecureString -String "ClientSecret" -AsPlainText -Force) -Verbose
 # Applies OAuth authentication with a Private Client in the current session for instance 'InstanceName.service-now.com' using provided tokens.
@@ -90,10 +98,22 @@ Basic Auth
 
 ```yaml
 Type: System.Management.Automation.PSCredential
-Parameter Sets: Basic, OAuth
+Parameter Sets: Basic
 Aliases:
 
 Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+```yaml
+Type: System.Management.Automation.PSCredential
+Parameter Sets: OAuth
+Aliases:
+
+Required: False
 Position: Named
 Default value: None
 Accept pipeline input: False

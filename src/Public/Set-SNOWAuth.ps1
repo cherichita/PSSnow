@@ -9,7 +9,12 @@ function Set-SNOWAuth {
         # Applies basic authentication in the current session for instance 'InstanceName.service-now.com'
     .EXAMPLE
         Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -ClientSecret (ConvertTo-SecureString -String "ClientSecret" -AsPlainText -Force) -Credential (get-credential) -Verbose
-        # Applies OAuth authentication in the current session for instance 'InstanceName.service-now.com'
+        # Applies OAuth authentication in the current session for instance 'InstanceName.service-now.com' using the resource owner password credentials flow.
+    .EXAMPLE
+        Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -ClientSecret (ConvertTo-SecureString -String "ClientSecret" -AsPlainText -Force)
+        # Applies OAuth authentication in the current session for instance 'InstanceName.service-now.com' using the client credentials flow.
+        # Client Credentials flow must be enabled in ServiceNow via system property glide.oauth.inbound.client.credential.grant_type.enabled
+        # See: https://support.servicenow.com/kb?id=kb_article_view&sysparm_article=KB2058936
     .EXAMPLE
         Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -AccessToken "AccessToken" -RefreshToken "RefreshToken" -ExpiresInSeconds 3600 -Verbose
         # Applies OAuth authentication with a Public Client in the current session for instance 'InstanceName.service-now.com' using provided tokens.

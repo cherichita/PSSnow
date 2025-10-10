@@ -144,7 +144,6 @@ function Sync-SNOWVCSApplication {
         if ($PSCmdlet.ParameterSetName -eq 'ByScope') {
             $appQuery = "scope=${Scope}^"
             $appObj = Get-SNOWObject -Table 'sys_app' -Query $appQuery -ErrorAction SilentlyContinue
-            
         }
         else {
             $appObj = Get-SNOWObject -Table 'sys_app' -Sys_Id $SysID -ErrorAction SilentlyContinue
@@ -156,7 +155,10 @@ function Sync-SNOWVCSApplication {
             Write-Host "Found application $($appObj.Name) $($PSCmdlet.ParameterSetName) - ${Scope} - sys_id: ${SysID}"
         }
         $AppRepo = Get-SNOWObject -Table 'sys_repo_config' -Query "url=${RepoURL}^"
-        
+        if ($AppRepo -and $AppRepo.credential.value -ne $credentialSysID) {
+            Write-Verbose "Updating existing sys_repo_config credential to use sys_id: $credentialSysID"
+            Set-SNOWObject -Table 'sys_repo_config' -Sys_Id $AppRepo.sys_id -Properties @{ credential = $credentialSysID } | Out-Null
+        }
         if ($appObj.sys_id) {
             if (-not $AppRepo) {
                 Write-Warning "Application $($appObj.sys_id) exists - but no sys_repo_config found. Creating sys_repo_config record for the application."

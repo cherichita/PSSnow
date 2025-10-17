@@ -21,7 +21,9 @@ function Set-SNOWAuth {
     .EXAMPLE
         Set-SNOWAuth -Instance "InstanceName" -ClientID "ClientID" -AccessToken "AccessToken" -RefreshToken "RefreshToken" -ExpiresInSeconds 3600 -ClientSecret (ConvertTo-SecureString -String "ClientSecret" -AsPlainText -Force) -Verbose
         # Applies OAuth authentication with a Private Client in the current session for instance 'InstanceName.service-now.com' using provided tokens. 
-
+    .EXAMPLE
+        Set-SNOWAuth -Instance "InstanceName" -Certificate $Cert -Verbose
+        # Applies Certificate based authentication in the current session for instance 'InstanceName.service-now.com' using provided certificate.
     .LINK
         https://github.com/insomniacc/PSSnow/blob/next/docs/UserGuide.MD#authentication
     .LINK
@@ -35,6 +37,7 @@ function Set-SNOWAuth {
         [Parameter(Mandatory, ParameterSetName = 'Basic')]
         [Parameter(Mandatory, ParameterSetName = 'OAuth')]
         [Parameter(Mandatory, ParameterSetName = 'OAuthToken')]
+        [Parameter(Mandatory, ParameterSetName = 'Certificate')]
         [ValidateNotNullOrEmpty()]
         [string]
         #Instance name e.g dev123456
@@ -57,18 +60,21 @@ function Set-SNOWAuth {
         [Parameter(ParameterSetName = 'Basic')]
         [Parameter(ParameterSetName = 'OAuth')]
         [Parameter(ParameterSetName = 'OAuthToken')]
+        [Parameter(ParameterSetName = 'Certificate')]
         [string]
         #By default if this param is not used the system default proxy will be provided if configured. URI should include the port if used.
         $ProxyURI,
         [Parameter(ParameterSetName = 'Basic')]
         [Parameter(ParameterSetName = 'OAuth')]
         [Parameter(ParameterSetName = 'OAuthToken')]
+        [Parameter(ParameterSetName = 'Certificate')]
         [PSCredential]
         #Provide credentials if you do not want to use default auth for any existing proxy
         $ProxyCredential,
         [Parameter(ParameterSetName = 'Basic')]
         [Parameter(ParameterSetName = 'OAuth')]
         [Parameter(ParameterSetName = 'OAuthToken')]
+        [Parameter(ParameterSetName = 'Certificate')]
         #Servicenow rate limit policies are per hour, this will cause commands to sleep and wait until those rate limits are refreshed, instead of returning an error.
         [switch]
         $HandleRatelimiting,
@@ -76,6 +82,7 @@ function Set-SNOWAuth {
         [Parameter(ParameterSetName = 'Basic')]
         [Parameter(ParameterSetName = 'OAuth')]
         [Parameter(ParameterSetName = 'OAuthToken')]
+        [Parameter(ParameterSetName = 'Certificate')]
         [int]
         $WebCallTimeoutSeconds,
         [Parameter(Mandatory, ParameterSetName = 'GetSNOWAuth', ValueFromPipeline)]
@@ -84,12 +91,14 @@ function Set-SNOWAuth {
         [Parameter(ParameterSetName = 'Basic')]
         [Parameter(ParameterSetName = 'OAuth')]
         [Parameter(ParameterSetName = 'OAuthToken')]
+        [Parameter(ParameterSetName = 'Certificate')]
         [switch]
         #Only supported on PS Core. 5.1 users will need to add a bypass via device config.
         $BypassDefaultProxy,
         [Parameter(ParameterSetName = 'Basic')]
         [Parameter(ParameterSetName = 'OAuth')]
         [Parameter(ParameterSetName = 'OAuthToken')]
+        [Parameter(ParameterSetName = 'Certificate')]
         [switch]
         # Create a web session for the session context. This will store the cookies and X-UserToken in the session object.
         $UseWebSession,
@@ -104,7 +113,11 @@ function Set-SNOWAuth {
         [Parameter(ParameterSetName = 'OAuthToken')]
         [int]
         #Token expiration time in seconds
-        $ExpiresInSeconds = 1800
+        $ExpiresInSeconds = 1800,
+        [Parameter(Mandatory, ParameterSetName = 'Certificate')]
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]
+        #Certificate based authentication (future)
+        $Certificate
     )
 
     BEGIN {}
@@ -182,6 +195,12 @@ function Set-SNOWAuth {
         }
     
         switch ($PsCmdlet.ParameterSetName) {
+            'Certificate' {
+                $script:SNOWAuth += @{
+                    type = "certificate"
+                    Certificate = $Certificate
+                }
+            }
             'Basic' {
                 $script:SNOWAuth += @{
                     type = "basic"

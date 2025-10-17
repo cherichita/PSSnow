@@ -101,6 +101,12 @@ function Invoke-SNOWWebRequest {
             $PSBoundParameters.Headers['X-UserToken'] = $script:SNOWAuth.SessionState.SecurityToken
         }
 
+        # Handle Certificate Authentication
+        if($script:SNOWAuth.type -eq "certificate"){
+            $Cert = $script:SNOWAuth.Certificate
+            $PSBoundParameters.Certificate = $Cert
+        }
+
         # Removes GUI and increases performance
         $ProgressPreference = "SilentlyContinue"
     }
